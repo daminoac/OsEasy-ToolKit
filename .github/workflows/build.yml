@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 env:
-  PYTHON_VERSION: "3.15.2"
+  PYTHON_VERSION: "3.12"
   PYTHONIOENCODING: utf-8
   PYTHONUTF8: '1'
 
