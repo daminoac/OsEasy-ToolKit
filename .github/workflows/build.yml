@@ -72,6 +72,20 @@ jobs:
         run: python build.py
         shell: pwsh
 
+      - name: Debug - inspect dist and config names
+        run: |
+          Write-Host "=== config names ==="
+          python -c "from config import APP_NAME, SOURCE_NAME, APP_VERSION; print('APP_NAME    =', APP_NAME); print('SOURCE_NAME =', SOURCE_NAME); print('APP_VERSION =', APP_VERSION)"
+          Write-Host "=== dist/ contents ==="
+          if (Test-Path dist) {
+            Get-ChildItem -Path dist -Recurse | Format-Table FullName, Length -AutoSize
+          } else {
+          Write-Host "dist/ 不存在"
+          }
+          Write-Host "=== cwd ==="
+          Get-Location
+        shell: pwsh
+
       - name: Post-build smoke test
         run: |
           $env:OSEASY_TEST_MODE = "1"
@@ -85,21 +99,19 @@ jobs:
           Write-Host "Found: $($exe.FullName)"
           & $exe.FullName
         shell: pwsh
-        continue-on-error: true
 
       - name: Locate built EXE
         id: exe
         run: |
-          $appName = "${{ steps.config.outputs.app_name }}"
-          $exe = Get-ChildItem -Path dist -Filter "$appName*.exe" -File | Select-Object -First 1
+          $exe = Get-ChildItem -Path dist -Filter "*.exe" -File | Select-Object -First 1
           if (-not $exe) {
             Write-Error "No EXE found in dist/"
-            Get-ChildItem -Path dist -Recurse | Format-Table FullName
+            if (Test-Path dist) { Get-ChildItem -Path dist -Recurse | Format-Table FullName }
             exit 1
-          }
-          Write-Host "EXE_NAME=$($exe.Name)"
-          "exe_name=$($exe.Name)" >> $env:GITHUB_OUTPUT
-          "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+           }
+           Write-Host "EXE_NAME=$($exe.Name)"
+           "exe_name=$($exe.Name)" >> $env:GITHUB_OUTPUT
+           "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
       - name: Upload artifact
