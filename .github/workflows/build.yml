@@ -2,6 +2,7 @@ name: Build and Release EXE
 
 on:
   workflow_dispatch:
+  push: 
 
 permissions:
   contents: write
@@ -75,27 +76,30 @@ jobs:
         run: |
           $env:OSEASY_TEST_MODE = "1"
           $exeName = "${{ steps.config.outputs.app_name }}.exe"
-          if (Test-Path "dist\$exeName") {
-            Write-Host "EXE built successfully!"
-            .\dist\$exeName
-          } else {
-            Write-Error "EXE not found at dist\$exeName!"
+          $exe = Get-ChildItem -Path dist -Filter "$appName*.exe" -File | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No EXE matching '$appName*.exe' found in dist/"
+            Get-ChildItem -Path dist -Recurse | Format-Table FullName
             exit 1
           }
+          Write-Host "Found: $($exe.FullName)"
+          & $exe.FullName
         shell: pwsh
         continue-on-error: true
 
-      - name: Compute file hash and rename EXE
+      - name: Locate built EXE
         id: exe
         run: |
           $appName = "${{ steps.config.outputs.app_name }}"
-          $version = "${{ steps.config.outputs.app_version }}"
-          $srcExe = "dist\$appName.exe"
-          $hash = (Get-FileHash -Path $srcExe -Algorithm SHA256).Hash.Substring(0, 7).ToLower()
-          $newName = "${appName}_${version}_${hash}.exe"
-          Rename-Item -Path $srcExe -NewName $newName
-          Write-Host "EXE_NAME=$newName"
-          "exe_name=$newName" >> $env:GITHUB_OUTPUT
+          $exe = Get-ChildItem -Path dist -Filter "$appName*.exe" -File | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "No EXE found in dist/"
+            Get-ChildItem -Path dist -Recurse | Format-Table FullName
+            exit 1
+          }
+          Write-Host "EXE_NAME=$($exe.Name)"
+          "exe_name=$($exe.Name)" >> $env:GITHUB_OUTPUT
+          "exe_path=$($exe.FullName)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
       - name: Upload artifact
